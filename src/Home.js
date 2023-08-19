@@ -1,7 +1,10 @@
 import React, { useState,useEffect } from 'react';
 import Papa from 'papaparse';
 import PdfDocument from './PdfDocument';
+import { Line } from 'react-chartjs-2';
 import CsvUpload from './CsvUpload';
+
+
 
 
 const Prototype = () => {
@@ -22,7 +25,9 @@ const Prototype = () => {
     
  
     const [csvData, setCsvData] = useState(null);
-    const [inputHistory, setInputHistory] = useState([]);  
+    const [inputHistory, setInputHistory] = useState([]); 
+    const [chartData, setChartData] = useState(null); // New state for chart data 
+
 
     useEffect(() => {
         const storedInputHistory = localStorage.getItem('inputHistory');
@@ -30,8 +35,27 @@ const Prototype = () => {
           setInputHistory(JSON.parse(storedInputHistory));
         }
       }, []);
-      
-   
+
+      useEffect(() => {
+        if (csvData) {
+          const chartLabels = csvData.map((row) => row.X);
+          const chartDataPoints = csvData.map((row) => row.Y);
+    
+          setChartData({
+            labels: chartLabels,
+            datasets: [
+              {
+                label: 'Y Values',
+                data: chartDataPoints,
+                backgroundColor: 'rgba(75, 192, 192, 0.4)',
+                borderColor: 'rgba(75, 192, 192, 1)',
+                borderWidth: 1,
+              },
+            ],
+          });
+        }
+      }, [csvData]);
+           
     const handleInputChange = (field, value) => {
       setFormData((prevData) => ({ ...prevData, [field]: value }));       
     
@@ -41,7 +65,8 @@ const Prototype = () => {
         Papa.parse(file, {
           complete: (result) => {
             const extractedData = processCsvData(result.data);
-            setCsvData(extractedData);
+            // setCsvData(extractedData);
+            setCsvData(extractedData.csvArray); // Update this line to set the array
             
           
             setFormData((prevData) => ({
@@ -103,8 +128,7 @@ const Prototype = () => {
   const handleSubmit = (e) => {
     e.preventDefault(); // Prevent default form submission behavior
   
-    if (step === 1 && canProceedToNextStep()) 
-    {
+    if (step === 1 && canProceedToNextStep()) {
       const newEntry = {
         projectName: formData.projectName,
         projectDescription: formData.projectDescription,
@@ -123,8 +147,7 @@ const Prototype = () => {
       localStorage.setItem('inputHistory', JSON.stringify([...inputHistory, newEntry]));
       setStep(step + 1);
     }
-  };
-  
+  }; 
 
 
 
@@ -229,12 +252,23 @@ const Prototype = () => {
           <div className='col-12 px-5 text-center'>
           <button className='btn btn-primary mb-5 mx-3' onClick={handleSubmit } disabled={!canProceedToNextStep}>Submit</button>
           <button className='btn btn-danger mb-5' onClick={() => setStep(2)}>Next</button>
-        </div>      
+        </div> 
+        
+    
+
     </div>
+    {chartData && (
+        <div className='chart-container'>
+          <h2 className='text-center'>Chart</h2>
+          <Line data={chartData} />
+        </div>
+      )}
+
     </form>
       ) : (
-        <div className='p-5 bg-primary'>
+        <div className='p-5 bg-primary  d-flex flex-column align-items-center table-responsive'>
           <h2  className='text-center'>Table Details</h2>
+          
           <table className='table'>
             <thead>
               <tr>
@@ -268,12 +302,16 @@ const Prototype = () => {
             </tbody>
          
           </table>
+         
           <PdfDocument inputHistory={inputHistory} />         
           
           <button className='btn btn-success mt-2' onClick={handleBack}>Back</button>       
          
         </div>
       )}
+
+        
+
     </div>
   );
 };
